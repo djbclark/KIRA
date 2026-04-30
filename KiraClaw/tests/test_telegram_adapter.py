@@ -454,7 +454,7 @@ def test_telegram_document_message_without_text_is_processed(tmp_path) -> None:
     asyncio.run(scenario())
 
 
-def test_telegram_group_messages_are_handled_as_room_transcript_without_direct_call_gate(tmp_path) -> None:
+def test_telegram_group_messages_without_mentions_are_ignored_by_default(tmp_path) -> None:
     async def scenario() -> None:
         settings = KiraClawSettings(
             data_dir=tmp_path / "data",
@@ -464,6 +464,64 @@ def test_telegram_group_messages_are_handled_as_room_transcript_without_direct_c
             telegram_enabled=False,
             agent_name="세나",
         )
+        class _SilentGroupSessionManager(_FakeSessionManager):
+            async def run(self, **kwargs) -> RunRecord:
+                self.calls.append(kwargs)
+                return RunRecord(
+                    run_id="run-1",
+                    session_id=kwargs["session_id"],
+                    state="completed",
+                    prompt=kwargs["prompt"],
+                    created_at="2026-01-01T00:00:00Z",
+                    finished_at="2026-01-01T00:00:01Z",
+                    result=RunResult(final_response="internal only", streamed_text=""),
+                    metadata=kwargs.get("metadata", {}),
+                )
+
+        session_manager = _SilentGroupSessionManager()
+        gateway = TelegramGateway(session_manager, settings, debounce_seconds=0.05)
+        sent: list[dict] = []
+
+        async def fake_send(chat_id, text, reply_to_message_id=None):
+            sent.append(
+                {
+                    "chat_id": chat_id,
+                    "text": text,
+                    "reply_to_message_id": reply_to_message_id,
+                }
+            )
+
+        gateway.send_message = fake_send  # type: ignore[method-assign]
+        gateway.identity = {"id": 999, "username": "jiho_kira_bot", "first_name": "지호봇"}
+
+        message = {
+            "chat": {"id": -100, "type": "group"},
+            "from": {"id": 10, "username": "batteryho", "first_name": "지호", "last_name": "전", "is_bot": False},
+            "message_id": 52,
+            "text": "상태 알려줘",
+        }
+
+        await gateway._handle_message(message)
+        await asyncio.sleep(0.12)
+
+        assert session_manager.calls == []
+        assert sent == []
+
+    asyncio.run(scenario())
+
+
+def test_telegram_group_ambient_messages_can_be_enabled_as_room_transcript(tmp_path) -> None:
+    async def scenario() -> None:
+        settings = KiraClawSettings(
+            data_dir=tmp_path / "data",
+            workspace_dir=tmp_path / "workspace",
+            home_mode="modern",
+            slack_enabled=False,
+            telegram_enabled=False,
+            telegram_group_ambient_enabled=True,
+            agent_name="세나",
+        )
+
         class _SilentGroupSessionManager(_FakeSessionManager):
             async def run(self, **kwargs) -> RunRecord:
                 self.calls.append(kwargs)
@@ -519,6 +577,7 @@ def test_telegram_group_messages_share_one_room_debounce_window(tmp_path) -> Non
             home_mode="modern",
             slack_enabled=False,
             telegram_enabled=False,
+            telegram_group_ambient_enabled=True,
             agent_name="세나",
         )
         class _SilentGroupSessionManager(_FakeSessionManager):

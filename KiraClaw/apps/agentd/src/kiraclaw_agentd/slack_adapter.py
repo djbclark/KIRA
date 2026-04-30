@@ -520,6 +520,15 @@ class SlackGateway:
         )
         if not prompt:
             return
+        if not self._should_accept_event(event, mention=mention, session_id=session_id):
+            logger.info(
+                "Ignoring ambient Slack group message without mention: session_id=%s channel=%s user=%s name=%s",
+                session_id,
+                channel,
+                user,
+                user_name,
+            )
+            return
         logger.info(
             "Queueing Slack run with debounce: session_id=%s channel=%s user=%s name=%s mention=%s dm=%s",
             session_id,
@@ -556,6 +565,19 @@ class SlackGateway:
             ),
             delay_seconds=self._debounce_seconds_for_event(event),
         )
+
+    def _should_accept_event(self, event: dict[str, Any], *, mention: bool, session_id: str) -> bool:
+        if _is_dm(event) or mention:
+            return True
+        if self.settings.slack_group_ambient_enabled:
+            return True
+        if not event.get("thread_ts"):
+            return False
+
+        if self.session_manager.get_session_records(session_id):
+            return True
+        has_active_run = getattr(self.session_manager, "has_active_run", None)
+        return bool(has_active_run(session_id)) if callable(has_active_run) else False
 
     def _debounce_seconds_for_event(self, event: dict[str, Any]) -> float:
         return self._private_debounce_seconds if _is_dm(event) else self._group_debounce_seconds

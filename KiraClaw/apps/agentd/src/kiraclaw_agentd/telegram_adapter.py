@@ -486,6 +486,14 @@ class TelegramGateway:
         session_id = _session_id_from_message(message)
         chat_id = message.get("chat", {}).get("id")
         reply_to_message_id = _reply_to_message_id(message)
+        if not self._should_accept_message(message, mention=mention, session_id=session_id):
+            logger.info(
+                "Ignoring ambient Telegram group message without mention: session_id=%s chat_id=%s user=%s",
+                session_id,
+                chat_id,
+                user_name,
+            )
+            return
         if await self._maybe_handle_inflight_message(
             session_id=session_id,
             prompt=prompt,
@@ -506,6 +514,19 @@ class TelegramGateway:
             ),
             delay_seconds=self._debounce_seconds_for_message(message),
         )
+
+    def _should_accept_message(self, message: dict[str, Any], *, mention: bool, session_id: str) -> bool:
+        if _is_private_chat(message) or mention:
+            return True
+        if self.settings.telegram_group_ambient_enabled:
+            return True
+        if not (message.get("message_thread_id") or message.get("reply_to_message")):
+            return False
+
+        if self.session_manager.get_session_records(session_id):
+            return True
+        has_active_run = getattr(self.session_manager, "has_active_run", None)
+        return bool(has_active_run(session_id)) if callable(has_active_run) else False
 
     def _debounce_seconds_for_message(self, message: dict[str, Any]) -> float:
         return self._private_debounce_seconds if _is_private_chat(message) else self._group_debounce_seconds

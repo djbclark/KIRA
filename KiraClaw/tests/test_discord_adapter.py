@@ -507,7 +507,7 @@ def test_discord_attachment_message_without_text_is_processed(tmp_path) -> None:
     asyncio.run(scenario())
 
 
-def test_discord_group_messages_are_handled_as_room_transcript_without_direct_call_gate(tmp_path) -> None:
+def test_discord_group_messages_without_mentions_are_ignored_by_default(tmp_path) -> None:
     async def scenario() -> None:
         settings = KiraClawSettings(
             data_dir=tmp_path / "data",
@@ -515,6 +515,90 @@ def test_discord_group_messages_are_handled_as_room_transcript_without_direct_ca
             home_mode="modern",
             slack_enabled=False,
             discord_enabled=False,
+            agent_name="세나",
+        )
+        session_manager = _FakeSessionManager(spoken=[], final_response="internal only")
+        gateway = DiscordGateway(session_manager, settings, debounce_seconds=0.05)
+        gateway.identity = {"id": 999, "name": "kira"}
+        sent: list[dict] = []
+
+        async def fake_send(channel_id, text, reply_to_message_id=None):
+            sent.append({"channel_id": channel_id, "text": text, "reply_to_message_id": reply_to_message_id})
+
+        gateway.send_message = fake_send  # type: ignore[method-assign]
+
+        message1 = _FakeMessage(
+            channel_id=777,
+            message_id=10,
+            content="우리 회의 몇시지?",
+            author=_FakeUser(user_id=10, name="jiho", display_name="Jiho"),
+            guild=object(),
+        )
+        message2 = _FakeMessage(
+            channel_id=777,
+            message_id=11,
+            content="아까 문서 업데이트됨",
+            author=_FakeUser(user_id=11, name="mina", display_name="Mina"),
+            guild=object(),
+        )
+
+        await gateway._handle_message(message1)
+        await gateway._handle_message(message2)
+        await asyncio.sleep(0.12)
+
+        assert session_manager.calls == []
+        assert sent == []
+
+    asyncio.run(scenario())
+
+
+def test_discord_group_messages_without_mentions_are_ignored_even_during_active_run(tmp_path) -> None:
+    async def scenario() -> None:
+        settings = KiraClawSettings(
+            data_dir=tmp_path / "data",
+            workspace_dir=tmp_path / "workspace",
+            home_mode="modern",
+            slack_enabled=False,
+            discord_enabled=False,
+            agent_name="세나",
+        )
+        session_manager = _FakeSessionManager(spoken=[], final_response="internal only")
+        session_manager.has_active_run = lambda session_id: True  # type: ignore[attr-defined]
+        gateway = DiscordGateway(session_manager, settings, debounce_seconds=0.05)
+        gateway.identity = {"id": 999, "name": "kira"}
+        sent: list[dict] = []
+
+        async def fake_send(channel_id, text, reply_to_message_id=None):
+            sent.append({"channel_id": channel_id, "text": text, "reply_to_message_id": reply_to_message_id})
+
+        gateway.send_message = fake_send  # type: ignore[method-assign]
+
+        message = _FakeMessage(
+            channel_id=777,
+            message_id=10,
+            content="왜지",
+            author=_FakeUser(user_id=10, name="jiho", display_name="Jiho"),
+            guild=object(),
+        )
+
+        await gateway._handle_message(message)
+        await asyncio.sleep(0.12)
+
+        assert session_manager.calls == []
+        assert sent == []
+
+    asyncio.run(scenario())
+
+
+def test_discord_group_ambient_messages_can_be_enabled_as_room_transcript(tmp_path) -> None:
+    async def scenario() -> None:
+        settings = KiraClawSettings(
+            data_dir=tmp_path / "data",
+            workspace_dir=tmp_path / "workspace",
+            home_mode="modern",
+            slack_enabled=False,
+            discord_enabled=False,
+            discord_group_ambient_enabled=True,
             agent_name="세나",
         )
         session_manager = _FakeSessionManager(spoken=[], final_response="internal only")

@@ -126,6 +126,8 @@ class ObserverService:
         model: str | None = None,
     ) -> ObserverDecision:
         fallback = self._fallback_classification(user_message, snapshot, inbound)
+        if self._should_suppress_queue_ack(inbound):
+            return ObserverDecision(intent="queue_next", reply_text="")
         active_name = self._active_name()
         try:
             parsed = self._chat_json(

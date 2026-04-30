@@ -193,3 +193,44 @@ def test_observer_service_suppresses_group_queue_ack_even_when_model_returns_tex
 
     assert decision.intent == "queue_next"
     assert decision.reply_text == ""
+
+
+def test_observer_service_suppresses_unmentioned_group_status_misclassification(tmp_path) -> None:
+    settings = KiraClawSettings(
+        data_dir=tmp_path / "data",
+        workspace_dir=tmp_path / "workspace",
+        home_mode="modern",
+        slack_enabled=False,
+    )
+    service = ObserverService(
+        settings,
+        model_factory=lambda provider, model, max_tokens: _FakeModel(
+            '{"intent":"status_query","reply_text":"지금 방금 메시지를 확인했고, 별도로 저한테 요청된 작업은 아닌 것으로 판단해서 조용히 넘어가는 중이에요"}'
+        ),
+        credential_checker=lambda settings, provider: None,
+    )
+
+    decision = service.classify_inflight(
+        "왜지",
+        {
+            "session_id": "slack:C1:main",
+            "source": "slack-group",
+            "state": "running",
+            "elapsed_seconds": 11,
+            "prompt": "단톡방 메시지 확인",
+            "streamed_text_tail": "",
+            "recent_tool_events": [],
+            "active_processes": [],
+            "run_mention": False,
+            "run_is_private": False,
+        },
+        InflightMessageContext(
+            source="slack-group",
+            mention=False,
+            is_private=False,
+            user_name="Jiho Jeon",
+        ),
+    )
+
+    assert decision.intent == "queue_next"
+    assert decision.reply_text == ""
