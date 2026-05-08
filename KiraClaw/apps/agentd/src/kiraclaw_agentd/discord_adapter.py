@@ -454,14 +454,6 @@ class DiscordGateway:
         session_id = _session_id_from_message(message)
         channel_id = getattr(getattr(message, "channel", None), "id", "unknown")
         reply_to_message_id = _reply_to_message_id(message)
-        if not self._should_accept_message(message, mention=mention, session_id=session_id):
-            logger.info(
-                "Ignoring ambient Discord group message without mention: session_id=%s channel_id=%s user=%s",
-                session_id,
-                channel_id,
-                user_name,
-            )
-            return
         if await self._maybe_handle_inflight_message(
             session_id=session_id,
             prompt=prompt,
@@ -482,13 +474,6 @@ class DiscordGateway:
             ),
             delay_seconds=self._debounce_seconds_for_message(message),
         )
-
-    def _should_accept_message(self, message: Any, *, mention: bool, session_id: str) -> bool:
-        if _is_private_message(message) or mention:
-            return True
-        if self.settings.discord_group_ambient_enabled:
-            return True
-        return False
 
     def _debounce_seconds_for_message(self, message: Any) -> float:
         return self._private_debounce_seconds if _is_private_message(message) else self._group_debounce_seconds

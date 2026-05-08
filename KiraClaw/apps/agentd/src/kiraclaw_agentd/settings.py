@@ -139,15 +139,12 @@ class KiraClawSettings(BaseSettings):
     slack_signing_secret: str = ""
     slack_team_id: str = ""
     slack_allowed_names: str = ""
-    slack_group_ambient_enabled: bool = False
     telegram_enabled: bool = False
     telegram_bot_token: str = ""
     telegram_allowed_names: str = ""
-    telegram_group_ambient_enabled: bool = False
     discord_enabled: bool = False
     discord_bot_token: str = ""
     discord_allowed_names: str = ""
-    discord_group_ambient_enabled: bool = False
     desktop_app_enabled: bool = True
     single_gateway_per_host: bool = True
     session_scope: str = "session-lane"
@@ -326,11 +323,8 @@ class KiraClawSettings(BaseSettings):
             "tableau_enabled": "TABLEAU_ENABLED",
             "browser_enabled": "CHROME_ENABLED",
             "slack_enabled": "SLACK_ENABLED",
-            "slack_group_ambient_enabled": "SLACK_GROUP_AMBIENT_ENABLED",
             "telegram_enabled": "TELEGRAM_ENABLED",
-            "telegram_group_ambient_enabled": "TELEGRAM_GROUP_AMBIENT_ENABLED",
             "discord_enabled": "DISCORD_ENABLED",
-            "discord_group_ambient_enabled": "DISCORD_GROUP_AMBIENT_ENABLED",
             "response_trace_enabled": "RESPONSE_TRACE_ENABLED",
         }
         for field_name, legacy_key in legacy_bool_field_map.items():

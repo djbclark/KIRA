@@ -41,7 +41,7 @@ def _snapshot_signature(snapshot: dict[str, Any]) -> str:
 
 
 def _should_emit_heartbeat(snapshot: dict[str, Any]) -> bool:
-    return bool(snapshot.get("run_is_private") or snapshot.get("run_mention"))
+    return bool(snapshot.get("state") == "running")
 
 
 async def maybe_route_inflight_message(

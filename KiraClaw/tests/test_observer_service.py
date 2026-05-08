@@ -195,7 +195,7 @@ def test_observer_service_suppresses_group_queue_ack_even_when_model_returns_tex
     assert decision.reply_text == ""
 
 
-def test_observer_service_suppresses_unmentioned_group_status_misclassification(tmp_path) -> None:
+def test_observer_service_respects_llm_classification_for_unmentioned_group_messages(tmp_path) -> None:
     settings = KiraClawSettings(
         data_dir=tmp_path / "data",
         workspace_dir=tmp_path / "workspace",
@@ -205,7 +205,7 @@ def test_observer_service_suppresses_unmentioned_group_status_misclassification(
     service = ObserverService(
         settings,
         model_factory=lambda provider, model, max_tokens: _FakeModel(
-            '{"intent":"status_query","reply_text":"지금 방금 메시지를 확인했고, 별도로 저한테 요청된 작업은 아닌 것으로 판단해서 조용히 넘어가는 중이에요"}'
+            '{"intent":"queue_next","reply_text":""}'
         ),
         credential_checker=lambda settings, provider: None,
     )

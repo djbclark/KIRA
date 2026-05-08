@@ -93,7 +93,10 @@ def _format_speak_guidance(agent_name: str, tool_names: list[str]) -> str | None
         "In scheduled or background runs, think and act first. If no outward message is needed, do not call speak.\n"
         "Keep your internal summary concise, action-oriented, and free of long private chain-of-thought dumps.\n"
         "When the current input looks like a multi-person room transcript, treat it as ambient shared-space context rather than as a guaranteed direct request.\n"
-        f"In shared rooms, speak only if someone explicitly addresses you as {active_name} or if interrupting would clearly provide useful help. Otherwise stay silent."
+        f"In shared rooms, speak only if someone explicitly addresses you by name ({active_name}) or by mention. "
+        "Do not speak just because the topic is tangentially related to something you know. "
+        "Only interrupt when you are directly addressed, directly asked a question, or when staying silent would clearly cause someone to miss critical information they need right now. "
+        "When in doubt, stay silent."
     )
 
 

@@ -126,8 +126,6 @@ class ObserverService:
         model: str | None = None,
     ) -> ObserverDecision:
         fallback = self._fallback_classification(user_message, snapshot, inbound)
-        if self._should_suppress_queue_ack(inbound):
-            return ObserverDecision(intent="queue_next", reply_text="")
         active_name = self._active_name()
         try:
             parsed = self._chat_json(
@@ -149,7 +147,8 @@ class ObserverService:
                     "- shared-room norms depend on the incoming message context, not just the active run source\n"
                     "- if incoming_is_private is false, keep shared-room norms in mind\n"
                     "- if incoming_mention is true, the user explicitly addressed you\n"
-                    "- if incoming_is_private is false and incoming_mention is false, reply only when the message clearly asks about the in-progress work; otherwise prefer queue_next\n"
+                    "- if incoming_is_private is false and incoming_mention is false, reply only when the message directly addresses you by name or clearly asks about the in-progress work; otherwise return queue_next with empty reply_text\n"
+                    "- if incoming_is_private is false and incoming_mention is false, do not reply just because the topic is tangentially related — stay silent unless directly addressed\n"
                     "- if incoming_is_private is false, keep the reply brief and non-disruptive\n"
                     "- queue_next: briefly acknowledge that the new request will wait until the current run completes\n"
                     "- unsupported_control: briefly say that the current in-progress run cannot be modified or canceled yet\n"
@@ -201,8 +200,8 @@ class ObserverService:
                     "Do not mention internal implementation details unless they clearly help.\n"
                     "run_mention and run_is_private describe how the current run was invoked.\n"
                     "If run_is_private is false, keep shared-room norms in mind.\n"
-                    "If run_is_private is false and run_mention is false, keep the update especially brief and low-noise.\n"
-                    "If source ends with '-group', keep the update especially brief and low-noise.\n"
+                    "If run_is_private is false and run_mention is false, return empty reply_text unless the run is clearly making visible progress worth reporting.\n"
+                    "If source ends with '-group', keep the update especially brief and low-noise; prefer empty reply_text over noise.\n"
                     "Do not promise completion times.\n"
                     "Return strict JSON only: {\"reply_text\":\"...\"}"
                 ),
