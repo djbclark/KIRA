@@ -105,9 +105,12 @@ def test_exec_tool_can_start_background_session_and_process_can_poll_log_and_cle
     assert poll_running["success"] is True
     assert poll_running["session"]["session_id"] == session_id
 
-    time.sleep(0.45)
+    for _ in range(20):
+        time.sleep(0.1)
+        log_result = json.loads(tools["process"].run(action="log", session_id=session_id))
+        if log_result.get("session", {}).get("status") == "completed":
+            break
 
-    log_result = json.loads(tools["process"].run(action="log", session_id=session_id))
     assert log_result["success"] is True
     assert log_result["session"]["status"] == "completed"
     assert log_result["session"]["exit_code"] == 0
