@@ -98,7 +98,7 @@ def test_run_heartbeat_loop_sends_updates_until_run_finishes() -> None:
     asyncio.run(scenario())
 
 
-def test_run_heartbeat_loop_stays_silent_for_unmentioned_group_runs() -> None:
+def test_run_heartbeat_loop_reaches_observer_for_unmentioned_group_runs() -> None:
     async def scenario() -> None:
         sent: list[str] = []
         observer = _FakeObserverService()
@@ -126,7 +126,6 @@ def test_run_heartbeat_loop_stays_silent_for_unmentioned_group_runs() -> None:
             interval_seconds=0.02,
         )
 
-        assert sent == []
-        assert observer.heartbeat_calls == 0
+        assert observer.heartbeat_calls >= 1
 
     asyncio.run(scenario())

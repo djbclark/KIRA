@@ -65,7 +65,7 @@ def test_system_prompt_mentions_speak_guidance_when_available() -> None:
     assert "Any normal text you return without using speak becomes internal summary only." in prompt
     assert "Keep your internal summary concise, action-oriented" in prompt
     assert "scheduled or background runs, think and act first" in prompt
-    assert "speak only if someone explicitly addresses you as 세나" in prompt
+    assert "speak only if someone explicitly addresses you by name (세나) or by mention" in prompt
 
 
 def test_system_prompt_marks_channel_tools_as_delivery_only() -> None:
