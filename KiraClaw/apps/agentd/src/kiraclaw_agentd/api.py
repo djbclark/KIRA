@@ -267,9 +267,12 @@ def create_app() -> FastAPI:
         )
         await engine.start()
         await memory_runtime.start()
-        await slack_gateway.start()
-        await telegram_gateway.start()
-        await discord_gateway.start()
+        await asyncio.gather(
+            slack_gateway.start(),
+            telegram_gateway.start(),
+            discord_gateway.start(),
+            return_exceptions=True,
+        )
         await scheduler_runtime.start()
         _sync_daemon_resources(gateway_state="running")
         daemon_plane.emit("gateway.started", message="agentd started", resource_kind="gateway", resource_id="agentd")
@@ -285,9 +288,12 @@ def create_app() -> FastAPI:
                 message="agentd stopping",
             )
             await scheduler_runtime.stop()
-            await discord_gateway.stop()
-            await telegram_gateway.stop()
-            await slack_gateway.stop()
+            await asyncio.gather(
+                slack_gateway.stop(),
+                telegram_gateway.stop(),
+                discord_gateway.stop(),
+                return_exceptions=True,
+            )
             await memory_runtime.stop()
             await session_manager.stop()
             await engine.stop()
