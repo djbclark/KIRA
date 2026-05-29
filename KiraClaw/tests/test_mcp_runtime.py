@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from types import SimpleNamespace
 
 from kiraclaw_agentd.mcp_runtime import (
@@ -294,6 +295,17 @@ def test_resolve_npx_binary_finds_nvm_install(tmp_path, monkeypatch) -> None:
 
     monkeypatch.setattr("kiraclaw_agentd.mcp_runtime.shutil.which", lambda name: None)
     monkeypatch.setattr("kiraclaw_agentd.mcp_runtime.Path.home", lambda: tmp_path)
+
+    real_exists = Path.exists
+
+    def fake_exists(self: Path) -> bool:
+        try:
+            self.resolve().relative_to(tmp_path.resolve())
+        except (ValueError, OSError):
+            return False
+        return real_exists(self)
+
+    monkeypatch.setattr("kiraclaw_agentd.mcp_runtime.Path.exists", fake_exists)
 
     assert _resolve_npx_binary() == str(npx_path)
 
