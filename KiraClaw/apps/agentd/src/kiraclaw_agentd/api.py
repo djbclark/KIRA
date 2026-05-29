@@ -646,10 +646,18 @@ def create_app() -> FastAPI:
 
     @app.get("/v1/run-logs")
     async def run_logs(limit: int = 50, session_id: str | None = None) -> dict:
-        logs = await asyncio.to_thread(run_log_store.tail, limit=limit, session_id=session_id)
+        log_file_path = str(run_log_store.log_file)
+        try:
+            logs = await asyncio.to_thread(run_log_store.tail, limit=limit, session_id=session_id)
+        except Exception as exc:
+            return {
+                "logs": [],
+                "run_log_file": log_file_path,
+                "error": str(exc),
+            }
         return {
             "logs": logs,
-            "run_log_file": str(run_log_store.log_file),
+            "run_log_file": log_file_path,
         }
 
     @app.get("/v1/run-logs/events")

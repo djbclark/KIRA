@@ -125,7 +125,7 @@ contextBridge.exposeInMainWorld("kiraclaw", {
     if (sessionId) {
       query.set("session_id", sessionId);
     }
-    return request(`/v1/run-logs?${query.toString()}`);
+    return request(`/v1/run-logs?${query.toString()}`, { timeoutMs: 30000 });
   },
   getResources(kind = "") {
     const query = new URLSearchParams();
@@ -144,7 +144,7 @@ contextBridge.exposeInMainWorld("kiraclaw", {
     if (resourceId) {
       query.set("resource_id", resourceId);
     }
-    return request(`/v1/daemon-events?${query.toString()}`);
+    return request(`/v1/daemon-events?${query.toString()}`, { timeoutMs: 30000 });
   },
   getDesktopMessages(sessionId = "desktop:local") {
     const query = new URLSearchParams();

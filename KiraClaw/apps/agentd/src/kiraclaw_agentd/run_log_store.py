@@ -28,6 +28,40 @@ def _silent_reason(record: RunRecord) -> str | None:
     return "no_speak"
 
 
+_TEXT_FIELD_MAX = 8 * 1024
+_EVENT_PAYLOAD_MAX = 2 * 1024
+_EVENT_LIST_MAX = 50
+
+
+def _truncate_text(value: Any, limit: int) -> str:
+    text = str(value or "")
+    if len(text) <= limit:
+        return text
+    return text[:limit] + f"\n... [truncated {len(text) - limit} chars]"
+
+
+def _truncate_event(event: Any) -> Any:
+    if not isinstance(event, dict):
+        return event
+    truncated: dict[str, Any] = {}
+    for key, value in event.items():
+        if isinstance(value, str) and len(value) > _EVENT_PAYLOAD_MAX:
+            truncated[key] = value[:_EVENT_PAYLOAD_MAX] + f"... [truncated {len(value) - _EVENT_PAYLOAD_MAX} chars]"
+        else:
+            truncated[key] = value
+    return truncated
+
+
+def _truncate_events(events: list[Any]) -> list[Any]:
+    if len(events) <= _EVENT_LIST_MAX:
+        return [_truncate_event(event) for event in events]
+    head = events[: _EVENT_LIST_MAX // 2]
+    tail = events[-(_EVENT_LIST_MAX - len(head)) :]
+    return [_truncate_event(event) for event in head] + [
+        {"type": "truncated", "skipped": len(events) - _EVENT_LIST_MAX}
+    ] + [_truncate_event(event) for event in tail]
+
+
 def build_run_log_entry(record: RunRecord) -> dict[str, Any]:
     result = record.result
     return {
@@ -49,6 +83,17 @@ def build_run_log_entry(record: RunRecord) -> dict[str, Any]:
         "tool_summary": summarize_tool_events(result.tool_events if result else []),
         "silent_reason": _silent_reason(record),
         "error": record.error,
+    }
+
+
+def truncate_run_log_entry_for_response(entry: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **entry,
+        "prompt": _truncate_text(entry.get("prompt"), _TEXT_FIELD_MAX),
+        "internal_summary": _truncate_text(entry.get("internal_summary"), _TEXT_FIELD_MAX),
+        "streamed_text": _truncate_text(entry.get("streamed_text"), _TEXT_FIELD_MAX),
+        "tool_events": _truncate_events(list(entry.get("tool_events") or [])),
+        "trace_events": _truncate_events(list(entry.get("trace_events") or [])),
     }
 
 
@@ -100,7 +145,7 @@ class RunLogStore:
         )
         combined = persisted_rows + live_rows
         combined.sort(key=_sort_run_log_entry_key, reverse=True)
-        return combined[:max_rows]
+        return [truncate_run_log_entry_for_response(row) for row in combined[:max_rows]]
 
     def current_sequence(self) -> int:
         with self._lock:
