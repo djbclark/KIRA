@@ -109,11 +109,11 @@ class CapturingEventHandler(NullEventHandler):
 
 def create_model(provider: str, model: str | None, max_tokens: int):
     if provider == "claude":
-        return ClaudeModel(model or "claude-opus-4-6", max_tokens=max_tokens)
+        return ClaudeModel(model or "claude-opus-4-7", max_tokens=max_tokens)
     if provider == "openai":
-        return OpenAIModel(model or "gpt-5.2", max_tokens=max_tokens)
+        return OpenAIModel(model or "gpt-5.5", max_tokens=max_tokens)
     if provider == "vertex_ai":
-        return VertexModel(model or "claude-opus-4-6", max_tokens=max_tokens)
+        return VertexModel(model or "claude-opus-4-7", max_tokens=max_tokens)
     raise ValueError(f"unknown provider: {provider}")
 
 

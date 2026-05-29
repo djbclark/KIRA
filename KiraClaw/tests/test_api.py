@@ -55,7 +55,7 @@ def test_runs_endpoint_returns_serializable_payload(monkeypatch) -> None:
                 "session_id": "desktop:test",
                 "prompt": "hello",
                 "provider": "openai",
-                "model": "gpt-5.2",
+                "model": "gpt-5.5",
             },
         )
 

@@ -75,8 +75,8 @@ export const SELECT_DEFAULTS = {
 };
 
 export const PROVIDER_DEFAULT_MODELS = {
-  claude: "claude-opus-4-6",
-  openai: "gpt-5.2",
+  claude: "claude-opus-4-7",
+  openai: "gpt-5.5",
 };
 
 export const DEFAULT_CHAT_SESSION_ID = "desktop:local";

@@ -77,7 +77,7 @@ def test_auto_mode_prefers_legacy_kira_home(tmp_path, monkeypatch) -> None:
     assert settings.data_dir == home / ".kira"
     assert settings.workspace_dir == workspace
     assert settings.provider == "vertex_ai"
-    assert settings.model == "claude-opus-4-6"
+    assert settings.model == "claude-opus-4-7"
     assert settings.agent_name == "KIRA"
     assert settings.agent_persona == "Calm and direct.\nPrefer action over explanation."
     assert settings.skills_enabled is True

@@ -36,7 +36,7 @@ def test_openai_default_model_is_gpt_5_2(monkeypatch) -> None:
 
     model = create_model("openai", None, max_tokens=2048)
 
-    assert model.model == "gpt-5.2"
+    assert model.model == "gpt-5.5"
 
 
 def test_compose_prompt_includes_recent_history_when_present() -> None:

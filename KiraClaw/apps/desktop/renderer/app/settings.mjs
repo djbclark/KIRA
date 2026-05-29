@@ -163,7 +163,7 @@ export function syncProviderFields() {
     if (!currentValue || (previousDefault && currentValue === previousDefault)) {
       modelInput.value = nextDefault;
     }
-    modelInput.placeholder = nextDefault || "claude-opus-4-6 or gpt-5.2";
+    modelInput.placeholder = nextDefault || "claude-opus-4-7 or gpt-5.5";
   }
 
   if (providerInput) {
