@@ -640,8 +640,9 @@ def create_app() -> FastAPI:
 
     @app.get("/v1/run-logs")
     async def run_logs(limit: int = 50, session_id: str | None = None) -> dict:
+        logs = await asyncio.to_thread(run_log_store.tail, limit=limit, session_id=session_id)
         return {
-            "logs": run_log_store.tail(limit=limit, session_id=session_id),
+            "logs": logs,
             "run_log_file": str(run_log_store.log_file),
         }
 
@@ -673,8 +674,14 @@ def create_app() -> FastAPI:
     @app.get("/v1/daemon-events")
     async def daemon_events(limit: int = 100, resource_kind: str | None = None, resource_id: str | None = None) -> dict:
         _sync_daemon_resources()
+        events = await asyncio.to_thread(
+            daemon_plane.events.tail,
+            limit=limit,
+            resource_kind=resource_kind,
+            resource_id=resource_id,
+        )
         return {
-            "events": daemon_plane.events.tail(limit=limit, resource_kind=resource_kind, resource_id=resource_id),
+            "events": events,
             "daemon_event_file": str(daemon_plane.event_log_file),
         }
 

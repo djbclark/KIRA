@@ -91,10 +91,16 @@ class RunLogStore:
 
     def tail(self, *, limit: int = 50, session_id: str | None = None) -> list[dict[str, Any]]:
         with self._lock:
-            rows = self._read_persisted_rows(session_id=session_id)
-            rows.extend(self._build_live_rows(session_id=session_id))
-            rows.sort(key=_sort_run_log_entry_key, reverse=True)
-            return rows[: max(1, limit)]
+            live_rows = self._build_live_rows(session_id=session_id)
+        max_rows = max(1, limit)
+        scan_target = max(max_rows * 4, 200)
+        persisted_rows = self._read_persisted_rows_tail(
+            session_id=session_id,
+            max_rows=scan_target,
+        )
+        combined = persisted_rows + live_rows
+        combined.sort(key=_sort_run_log_entry_key, reverse=True)
+        return combined[:max_rows]
 
     def current_sequence(self) -> int:
         with self._lock:
@@ -115,15 +121,48 @@ class RunLogStore:
             rows.append(build_run_log_entry(record))
         return rows
 
-    def _read_persisted_rows(self, *, session_id: str | None = None) -> list[dict[str, Any]]:
+    def _read_persisted_rows_tail(
+        self,
+        *,
+        session_id: str | None = None,
+        max_rows: int = 200,
+    ) -> list[dict[str, Any]]:
         if not self._log_file.exists():
             return []
 
+        chunk_size = 64 * 1024
+        try:
+            file_size = self._log_file.stat().st_size
+        except OSError:
+            return []
+        if file_size == 0:
+            return []
+
+        collected_lines: list[str] = []
+        buffer = b""
+        position = file_size
+        with self._log_file.open("rb") as handle:
+            while position > 0 and len(collected_lines) < max_rows:
+                read_size = min(chunk_size, position)
+                position -= read_size
+                handle.seek(position)
+                buffer = handle.read(read_size) + buffer
+                lines = buffer.split(b"\n")
+                buffer = lines[0]
+                for raw in reversed(lines[1:]):
+                    text = raw.decode("utf-8", errors="replace").strip()
+                    if not text:
+                        continue
+                    collected_lines.append(text)
+                    if len(collected_lines) >= max_rows:
+                        break
+            if buffer and len(collected_lines) < max_rows:
+                text = buffer.decode("utf-8", errors="replace").strip()
+                if text:
+                    collected_lines.append(text)
+
         rows: list[dict[str, Any]] = []
-        for raw_line in self._log_file.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line:
-                continue
+        for line in reversed(collected_lines):
             try:
                 row = json.loads(line)
             except json.JSONDecodeError:
@@ -131,7 +170,6 @@ class RunLogStore:
             if session_id and row.get("session_id") != session_id:
                 continue
             rows.append(row)
-
         return rows
 
 
