@@ -1,4 +1,4 @@
-import { BOOLEAN_FIELDS, EXTERNAL_MCP_CONFIG_FIELDS, EXTERNAL_MCP_SERVER_NAMES, PROVIDER_DEFAULT_MODELS, SETTINGS_FIELDS, SELECT_DEFAULTS } from "./constants.mjs";
+import { BOOLEAN_FIELDS, EXTERNAL_MCP_CONFIG_FIELDS, EXTERNAL_MCP_SERVER_NAMES, LEGACY_DEFAULT_MODELS, PROVIDER_DEFAULT_MODELS, SETTINGS_FIELDS, SELECT_DEFAULTS } from "./constants.mjs";
 import { byId, escapeHtml, setText } from "./dom.mjs";
 import { t } from "./i18n.mjs";
 
@@ -160,8 +160,16 @@ export function syncProviderFields() {
     const previousDefault = PROVIDER_DEFAULT_MODELS[previousProvider] || "";
     const nextDefault = PROVIDER_DEFAULT_MODELS[provider] || "";
 
-    if (!currentValue || (previousDefault && currentValue === previousDefault)) {
+    const isStaleDefault =
+      currentValue &&
+      ((previousDefault && currentValue === previousDefault) ||
+        LEGACY_DEFAULT_MODELS.has(currentValue));
+
+    if (!currentValue || isStaleDefault) {
       modelInput.value = nextDefault;
+      if (currentValue !== nextDefault) {
+        modelInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
     }
     modelInput.placeholder = nextDefault || "claude-opus-4-7 or gpt-5.5";
   }

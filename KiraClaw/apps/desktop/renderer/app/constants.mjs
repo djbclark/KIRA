@@ -79,6 +79,17 @@ export const PROVIDER_DEFAULT_MODELS = {
   openai: "gpt-5.5",
 };
 
+export const LEGACY_DEFAULT_MODELS = new Set([
+  "claude-opus-4-6",
+  "claude-opus-4-5",
+  "claude-opus-4",
+  "gpt-5.2",
+  "gpt-5.1",
+  "gpt-5",
+  "gpt-4.5",
+  "gpt-4-turbo",
+]);
+
 export const DEFAULT_CHAT_SESSION_ID = "desktop:local";
 
 export const EXTERNAL_MCP_SERVER_NAMES = [

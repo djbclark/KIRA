@@ -8,9 +8,79 @@ from typing import Any, Callable
 
 from krim_sdk import Agent, AgentOptions, NullEventHandler
 from krim_sdk.events import Event, EventType
-from krim_sdk.models import ClaudeModel, OpenAIModel, VertexModel
+from krim_sdk.models import ClaudeModel as _BaseClaudeModel, OpenAIModel as _BaseOpenAIModel, VertexModel as _BaseVertexModel
 from krim_sdk.skills import Skill, discover_skills
 from krim_sdk.tools import BashTool, SkillTool, default_tools, default_tools_with_skills
+
+_NO_TEMPERATURE_PREFIXES = ("claude-opus-4-7",)
+_OPENAI_NO_TEMPERATURE_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+
+
+def _model_drops_temperature(model_name: str) -> bool:
+    return any(model_name.startswith(prefix) for prefix in _NO_TEMPERATURE_PREFIXES)
+
+
+def _openai_model_drops_temperature(model_name: str) -> bool:
+    normalized = model_name.strip().lower()
+    return any(normalized.startswith(prefix) for prefix in _OPENAI_NO_TEMPERATURE_PREFIXES)
+
+
+def _build_anthropic_chat_kwargs(model_obj, messages, tools):
+    system = None
+    chat_msgs = []
+    for message in messages:
+        if message["role"] == "system":
+            system = message["content"]
+        else:
+            chat_msgs.append(message)
+    kwargs: dict = {
+        "model": model_obj.model,
+        "max_tokens": model_obj.max_tokens,
+        "messages": chat_msgs,
+    }
+    if not _model_drops_temperature(model_obj.model):
+        kwargs["temperature"] = float(os.environ.get("KRIM_TEMPERATURE", "0"))
+    if system:
+        kwargs["system"] = system
+    if tools:
+        kwargs["tools"] = tools
+    return kwargs
+
+
+class ClaudeModel(_BaseClaudeModel):
+    def chat(self, messages, tools, stream_callback=None):
+        kwargs = _build_anthropic_chat_kwargs(self, messages, tools)
+        if stream_callback:
+            return self._stream(kwargs, stream_callback)
+        resp = self.client.messages.create(**kwargs)
+        return self._parse(resp)
+
+
+class VertexModel(_BaseVertexModel):
+    def chat(self, messages, tools, stream_callback=None):
+        kwargs = _build_anthropic_chat_kwargs(self, messages, tools)
+        if stream_callback:
+            return self._stream(kwargs, stream_callback)
+        resp = self.client.messages.create(**kwargs)
+        return self._parse(resp)
+
+
+class OpenAIModel(_BaseOpenAIModel):
+    def chat(self, messages, tools, stream_callback=None):
+        oai_tools = self._convert_tools(tools) if tools else None
+        kwargs: dict = {
+            "model": self.model,
+            "messages": messages,
+        }
+        if not _openai_model_drops_temperature(self.model):
+            kwargs["temperature"] = float(os.environ.get("KRIM_TEMPERATURE", "0"))
+        kwargs.update(self._token_limit_kwargs())
+        if oai_tools:
+            kwargs["tools"] = oai_tools
+        if stream_callback:
+            return self._stream(kwargs, stream_callback)
+        resp = self.client.chat.completions.create(**kwargs)
+        return self._parse(resp)
 
 from kiraclaw_agentd.mcp_runtime import McpRuntime
 from kiraclaw_agentd.memory_tools import build_memory_tools
